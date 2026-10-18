@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full w-full overflow-hidden">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>My Family - Interactive English Game for Kids</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts: Fredoka -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Tablet & Touch Strict Guardrails */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: fixed;
+            font-family: 'Fredoka', cursive, sans-serif;
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+        }
+
+        /* Animated Floating Elements */
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.35);
+            animation: floatUp 10s infinite linear;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(110vh) scale(0.8); opacity: 0; }
+            20% { opacity: 0.7; }
+            100% { transform: translateY(-20vh) scale(1.2); opacity: 0; }
+        }
+
+        /* Large Touch Target Active Effects */
+        .tablet-btn {
+            min-height: 60px;
+            min-width: 60px;
+            transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, filter 0.08s ease-out;
+            cursor: pointer;
+        }
+
+        .tablet-btn:active {
+            transform: scale(0.92) translateY(3px) !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+            filter: brightness(0.95);
+        }
+
+        .bounce-gentle {
+            animation: bounceGentle 2.2s infinite ease-in-out;
+        }
+
+        @keyframes bounceGentle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .shake-error {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+
+        .slot-pop {
+            animation: slotPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes slotPop {
+            0% { transform: scale(0.3); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="flex flex-col h-full w-full justify-between p-3 sm:p-5 select-none relative">
+
+    <!-- FLOATING BACKGROUND BUBBLES -->
+    <div id="bubblesContainer" class="absolute inset-0 overflow-hidden pointer-events-none"></div>
+
+    <!-- ================= TOP BAR (HEADER) ================= -->
+    <header class="relative z-10 w-full max-w-5xl mx-auto flex items-center justify-between bg-white/85 backdrop-blur-md p-3 sm:p-4 rounded-3xl shadow-xl border-4 border-yellow-300">
+        <button id="homeBtn" onclick="showMenu()" class="tablet-btn hidden bg-gradient-to-r from-pink-500 to-rose-500 active:from-pink-600 active:to-rose-600 text-white font-bold py-2 px-5 rounded-2xl shadow-md flex items-center gap-2 text-lg sm:text-2xl border-b-4 border-rose-700">
+            <i class="fa-solid fa-house"></i>
+            <span class="hidden sm:inline">Menu / Меню</span>
+        </button>
+
+        <div class="flex items-center gap-3 mx-auto sm:mx-0">
+            <span class="text-3xl sm:text-5xl bounce-gentle">👨‍👩‍👧‍👦</span>
+            <div>
+                <h1 id="appTitle" class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-indigo-800 tracking-wide">My Family 🏡</h1>
+                <p id="appSubtitle" class="text-xs sm:text-sm font-semibold text-indigo-500 hidden sm:block">English for 1st Grade / Англійська для 1 класу</p>
+            </div>
+        </div>
+
+        <!-- REWARD BADGE -->
+        <div class="flex items-center bg-amber-100 border-3 border-amber-400 px-4 py-2 rounded-2xl shadow-inner gap-2 sm:gap-3">
+            <i class="fa-solid fa-star text-amber-500 text-3xl sm:text-4xl animate-spin" style="animation-duration: 10s;"></i>
+            <span id="totalStars" class="text-2xl sm:text-4xl font-extrabold text-amber-800">0</span>
+        </div>
+    </header>
+
+    <!-- ================= MAIN CONTAINER ================= -->
+    <main class="relative z-10 w-full max-w-5xl mx-auto flex-grow flex items-center justify-center my-2 sm:my-4 overflow-hidden">
+
+        <!-- ================= 0. MAIN MENU ================= -->
+        <div id="mainMenu" class="w-full h-full flex flex-col justify-center items-center gap-4 sm:gap-6 p-2">
+            
+            <div class="text-center mb-1">
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-indigo-900">Choose a Game! / Обери гру! ✨</h2>
+            </div>
+
+            <!-- LEVEL CARDS GRID -->
+            <div class="w-full grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                
+                <!-- Card 1 -->
+                <div onclick="startGame(1)" class="tablet-btn bg-gradient-to-br from-pink-400 via-rose-500 to-purple-500 rounded-3xl p-5 sm:p-6 text-white shadow-2xl flex flex-col items-center text-center border-4 border-white/80 relative overflow-hidden group">
+                    <div class="bg-white/20 p-4 rounded-full mb-3 text-5xl sm:text-6xl bounce-gentle">
+                        👩‍👩‍👦
+                    </div>
+                    <h3 class="text-2xl sm:text-3xl font-extrabold mb-1">Group 1</h3>
+                    <p class="text-pink-100 text-base sm:text-lg font-medium mb-3">Meet My Family (Flashcards & Quiz)</p>
+                    <div class="mt-auto w-full bg-white text-rose-600 font-extrabold py-3 rounded-2xl shadow-lg text-xl sm:text-2xl">
+                        Play! / Грати 🚀
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div onclick="startGame(2)" class="tablet-btn bg-gradient-to-br from-indigo-500 via-purple-600 to-blue-600 rounded-3xl p-5 sm:p-6 text-white shadow-2xl flex flex-col items-center text-center border-4 border-white/80 relative overflow-hidden group">
+                    <div class="bg-white/20 p-4 rounded-full mb-3 text-5xl sm:text-6xl bounce-gentle" style="animation-delay: 0.3s;">
+                        🌳
+                    </div>
+                    <h3 class="text-2xl sm:text-3xl font-extrabold mb-1">Group 2</h3>
+                    <p class="text-indigo-100 text-base sm:text-lg font-medium mb-3">Who is this? (Family Tree)</p>
+                    <div class="mt-auto w-full bg-white text-indigo-700 font-extrabold py-3 rounded-2xl shadow-lg text-xl sm:text-2xl">
+                        Play! / Грати 🚀
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div onclick="startGame(3)" class="tablet-btn bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600 rounded-3xl p-5 sm:p-6 text-white shadow-2xl flex flex-col items-center text-center border-4 border-white/80 relative overflow-hidden group">
+                    <div class="bg-white/20 p-4 rounded-full mb-3 text-5xl sm:text-6xl bounce-gentle" style="animation-delay: 0.6s;">
+                        🎨
+                    </div>
+                    <h3 class="text-2xl sm:text-3xl font-extrabold mb-1">Group 3</h3>
+                    <p class="text-emerald-100 text-base sm:text-lg font-medium mb-3">Count & Color with Family (1-8)</p>
+                    <div class="mt-auto w-full bg-white text-teal-700 font-extrabold py-3 rounded-2xl shadow-lg text-xl sm:text-2xl">
+                        Play! / Грати 🚀
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================= 1. GAME 1: FLASHCARDS & QUIZ ================= -->
+        <div id="game1" class="hidden w-full h-full bg-white/90 backdrop-blur-md rounded-3xl p-4 sm:p-6 shadow-2xl border-4 border-pink-300 flex flex-col justify-between items-center overflow-y-auto">
+            
+            <div class="w-full flex items-center justify-between border-b-2 border-pink-100 pb-2">
+                <div class="flex gap-2">
+                    <button id="g1SubLearn" onclick="setG1Submode('learn')" class="px-4 py-2 rounded-xl font-extrabold text-base sm:text-lg bg-rose-500 text-white shadow">
+                        📚 Learn / Вчимо
+                    </button>
+                    <button id="g1SubQuiz" onclick="setG1Submode('quiz')" class="px-4 py-2 rounded-xl font-extrabold text-base sm:text-lg bg-pink-100 text-rose-800">
+                        ❓ Quiz / Вікторина
+                    </button>
+                </div>
+                <div id="g1Progress" class="flex gap-2 text-2xl sm:text-3xl text-amber-400"></div>
+            </div>
+
+            <!-- SUBMODE A: LEARN FLASHCARDS -->
+            <div id="g1LearnContainer" class="w-full my-auto flex flex-col items-center">
+                <p class="text-indigo-900 font-extrabold text-lg sm:text-xl mb-3 text-center">Tap a card to hear English pronunciation! / Натисни, щоб почути!</p>
+                <div id="flashcardGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 w-full max-w-4xl">
+                    <!-- Cards rendered via JS -->
+                </div>
+            </div>
+
+            <!-- SUBMODE B: QUIZ -->
+            <div id="g1QuizContainer" class="hidden w-full my-auto flex flex-col items-center">
+                <div class="bg-gradient-to-r from-rose-400 to-pink-500 text-white rounded-3xl p-4 sm:p-6 shadow-xl border-4 border-white text-center w-full max-w-xl mb-4">
+                    <span class="text-lg sm:text-xl font-bold block mb-1">Find / Знайди:</span>
+                    <div id="g1QuizTargetWord" class="text-4xl sm:text-6xl font-black tracking-wider drop-shadow">
+                        Mother
+                    </div>
+                    <button onclick="speakWord(g1CurrentTarget.en)" class="mt-2 bg-white/30 hover:bg-white/40 text-white font-bold py-1 px-4 rounded-full text-lg flex items-center gap-2 mx-auto border border-white">
+                        <i class="fa-solid fa-volume-high"></i> Listen again
+                    </button>
+                </div>
+
+                <div id="g1QuizOptions" class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 w-full max-w-3xl">
+                    <!-- Options -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 2. GAME 2: FAMILY TREE ================= -->
+        <div id="game2" class="hidden w-full h-full bg-white/90 backdrop-blur-md rounded-3xl p-4 sm:p-6 shadow-2xl border-4 border-indigo-300 flex flex-col justify-between items-center">
+            
+            <div class="w-full flex items-center justify-between border-b-2 border-indigo-100 pb-2">
+                <span class="text-lg sm:text-xl font-bold text-indigo-700 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-200">
+                    Who is this? / Хто це?
+                </span>
+                <div id="g2Progress" class="flex gap-2 text-2xl sm:text-3xl text-amber-400"></div>
+            </div>
+
+            <!-- Family Tree Board -->
+            <div class="w-full max-w-3xl bg-emerald-50/90 rounded-3xl p-4 border-4 border-emerald-300 shadow-inner my-auto relative flex flex-col items-center gap-3">
+                <div class="text-center font-extrabold text-emerald-900 text-lg sm:text-2xl">
+                    Family Tree 🌳 Родинне дерево
+                </div>
+
+                <!-- Tree Slots Structure -->
+                <div id="treeSlots" class="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-4 w-full justify-items-center">
+                    <!-- Dynamically created slots -->
+                </div>
+            </div>
+
+            <!-- Prompt and Touch Options -->
+            <div class="w-full max-w-2xl text-center">
+                <p id="g2PromptText" class="text-lg sm:text-2xl font-extrabold text-indigo-900 mb-2">
+                    Who is missing? / Кого не вистачає?
+                </p>
+                <div id="g2Options" class="flex flex-wrap justify-center gap-3 w-full">
+                    <!-- Option Buttons -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 3. GAME 3: COLOR & COUNT (1-8) ================= -->
+        <div id="game3" class="hidden w-full h-full bg-white/90 backdrop-blur-md rounded-3xl p-4 sm:p-6 shadow-2xl border-4 border-teal-300 flex flex-col justify-between items-center">
+            
+            <div class="w-full flex items-center justify-between border-b-2 border-teal-100 pb-2">
+                <span class="text-lg sm:text-xl font-bold text-teal-800 bg-teal-50 px-4 py-2 rounded-xl border border-teal-200">
+                    Count & Color / Рахуємо та розфарбовуємо
+                </span>
+                <div id="g3Progress" class="flex gap-2 text-2xl sm:text-3xl text-amber-400"></div>
+            </div>
+
+            <!-- Central Challenge Card -->
+            <div id="g3TaskCard" class="w-full max-w-2xl bg-gradient-to-r from-teal-400 to-cyan-500 text-white p-4 sm:p-6 rounded-3xl shadow-xl text-center border-4 border-white my-auto flex flex-col items-center">
+                <div id="g3MemberAvatar" class="text-6xl sm:text-7xl mb-2 bounce-gentle">
+                    👧
+                </div>
+                <div id="g3TaskText" class="text-2xl sm:text-4xl font-black">
+                    Give 5 red hearts to Sister!
+                </div>
+                <div id="g3TaskUkr" class="text-sm sm:text-lg font-bold text-teal-100 mt-1">
+                    Подаруй 5 червоних сердечок для Сестрички!
+                </div>
+            </div>
+
+            <!-- Interactive Item Tray -->
+            <div class="w-full max-w-3xl bg-teal-50 p-4 rounded-3xl border-3 border-teal-200 text-center">
+                <div id="g3ItemTray" class="flex flex-wrap justify-center items-center gap-3 min-h-[90px]">
+                    <!-- Items gathered -->
+                </div>
+                <div class="mt-2 font-black text-xl text-teal-900">
+                    Count / Лічимо: <span id="g3CurrentCountText" class="text-3xl text-rose-600">0</span> / <span id="g3TargetCountText">5</span>
+                </div>
+            </div>
+
+            <!-- Tap Options -->
+            <div class="w-full max-w-xl text-center mb-1">
+                <p class="text-slate-700 font-bold text-base sm:text-lg mb-2">Tap to give items / Натискай, щоб дарувати:</p>
+                <div id="g3ActionButtons" class="flex justify-center gap-3">
+                    <!-- Buttons -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="relative z-10 text-center text-slate-600 font-bold text-xs sm:text-sm">
+        📱 Optimized for 1st Grade Tablets • English Vocabulary: Family & Numbers 1-8
+    </footer>
+
+    <!-- AUDIO ENGINE (Web Audio API & Speech Synthesis) -->
+    <script>
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        window.addEventListener('touchstart', initAudio, { once: true });
+        window.addEventListener('click', initAudio, { once: true });
+
+        // Text To Speech helper for English
+        function speakWord(text) {
+            initAudio();
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop current speech
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.85; // slightly slower for 1st graders
+                utterance.pitch = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function playSound(type) {
+            initAudio();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            
+            if (type === 'correct') {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.08);
+                    gain.gain.setValueAtTime(0.25, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.35);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.35);
+                });
+            } else if (type === 'wrong') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.linearRampToValueAtTime(130, now + 0.25);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } else if (type === 'pop') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(380, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.06);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+                osc.start(now);
+                osc.stop(now + 0.06);
+            } else if (type === 'win') {
+                const notes = [440, 554.37, 659.25, 880, 1108.73];
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                    gain.gain.setValueAtTime(0.3, now + idx * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.5);
+                    osc.start(now + idx * 0.1);
+                    osc.stop(now + idx * 0.1 + 0.5);
+                });
+            }
+        }
+    </script>
+
+    <!-- GAME ENGINE CODE -->
+    <script>
+        // Family Vocabulary Database
+        const FAMILY_MEMBERS = [
+            { id: 'mom', en: 'Mother', alt: 'Mom', uk: 'Мама', emoji: '👩', color: '#ec4899' },
+            { id: 'dad', en: 'Father', alt: 'Dad', uk: 'Тато', emoji: '👨', color: '#3b82f6' },
+            { id: 'sister', en: 'Sister', alt: 'Sister', uk: 'Сестра', emoji: '👧', color: '#f59e0b' },
+            { id: 'brother', en: 'Brother', alt: 'Brother', uk: 'Брат', emoji: '👦', color: '#10b981' },
+            { id: 'grandma', en: 'Grandma', alt: 'Grandmother', uk: 'Бабуся', emoji: '👵', color: '#8b5cf6' },
+            { id: 'grandpa', en: 'Grandpa', alt: 'Grandfather', uk: 'Дідусь', emoji: '👴', color: '#6366f1' },
+            { id: 'baby', en: 'Baby', alt: 'Baby', uk: 'Малюк', emoji: '👶', color: '#f43f5e' },
+            { id: 'pet', en: 'Pet', alt: 'Dog / Cat', uk: 'Улюбленець', emoji: '🐶', color: '#d97706' }
+        ];
+
+        const COLORS = [
+            { id: 'red', nameEn: 'red', nameUk: 'червоні', hex: '#ef4444' },
+            { id: 'yellow', nameEn: 'yellow', nameUk: 'жовті', hex: '#eab308' },
+            { id: 'blue', nameEn: 'blue', nameUk: 'сині', hex: '#3b82f6' },
+            { id: 'green', nameEn: 'green', nameUk: 'зелені', hex: '#10b981' },
+            { id: 'pink', nameEn: 'pink', nameUk: 'рожеві', hex: '#ec4899' },
+            { id: 'purple', nameEn: 'purple', nameUk: 'фіолетові', hex: '#a855f7' }
+        ];
+
+        const SHAPES = [
+            { id: 'heart', nameEn: 'hearts', nameUk: 'сердечок', icon: 'fa-heart' },
+            { id: 'star', nameEn: 'stars', nameUk: 'зірочок', icon: 'fa-star' },
+            { id: 'apple', nameEn: 'apples', nameUk: 'яблучок', icon: 'fa-apple-whole' },
+            { id: 'flower', nameEn: 'flowers', nameUk: 'квіточок', icon: 'fa-spa' }
+        ];
+
+        let totalStars = 0;
+        let currentGame = 0;
+        let currentStep = 0;
+        const totalSteps = 5;
+
+        window.onload = function() {
+            createBackgroundBubbles();
+            showMenu();
+        };
+
+        function createBackgroundBubbles() {
+            const container = document.getElementById('bubblesContainer');
+            for (let i = 0; i < 15; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                const size = Math.random() * 60 + 30;
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${Math.random() * 100}%`;
+                bubble.style.animationDelay = `${Math.random() * 8}s`;
+                bubble.style.animationDuration = `${Math.random() * 8 + 8}s`;
+                container.appendChild(bubble);
+            }
+        }
+
+        function updateStars(count) {
+            totalStars += count;
+            document.getElementById('totalStars').innerText = totalStars;
+        }
+
+        function showMenu() {
+            playSound('pop');
+            currentGame = 0;
+            document.getElementById('mainMenu').classList.remove('hidden');
+            document.getElementById('game1').classList.add('hidden');
+            document.getElementById('game2').classList.add('hidden');
+            document.getElementById('game3').classList.add('hidden');
+            document.getElementById('homeBtn').classList.add('hidden');
+            document.getElementById('appTitle').innerText = 'My Family 🏡';
+        }
+
+        function startGame(gameId) {
+            playSound('pop');
+            currentGame = gameId;
+            currentStep = 0;
+
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('homeBtn').classList.remove('hidden');
+
+            document.getElementById('game1').classList.add('hidden');
+            document.getElementById('game2').classList.add('hidden');
+            document.getElementById('game3').classList.add('hidden');
+
+            if (gameId === 1) {
+                document.getElementById('appTitle').innerText = 'Group 1: Vocabulary';
+                document.getElementById('game1').classList.remove('hidden');
+                setG1Submode('learn');
+            } else if (gameId === 2) {
+                document.getElementById('appTitle').innerText = 'Group 2: Family Tree';
+                document.getElementById('game2').classList.remove('hidden');
+                nextGame2Step();
+            } else if (gameId === 3) {
+                document.getElementById('appTitle').innerText = 'Group 3: Count & Color';
+                document.getElementById('game3').classList.remove('hidden');
+                nextGame3Step();
+            }
+        }
+
+        function renderProgress(elementId) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            for (let i = 0; i < totalSteps; i++) {
+                if (i < currentStep) {
+                    container.innerHTML += `<i class="fa-solid fa-star text-amber-400"></i>`;
+                } else {
+                    container.innerHTML += `<i class="fa-regular fa-star text-slate-300"></i>`;
+                }
+            }
+        }
+
+        // ==========================================
+        // MODULE 1: FLASHCARDS & QUIZ
+        // ==========================================
+        let g1Submode = 'learn';
+        let g1CurrentTarget = null;
+
+        function setG1Submode(mode) {
+            playSound('pop');
+            g1Submode = mode;
+            const btnLearn = document.getElementById('g1SubLearn');
+            const btnQuiz = document.getElementById('g1SubQuiz');
+            const learnCont = document.getElementById('g1LearnContainer');
+            const quizCont = document.getElementById('g1QuizContainer');
+
+            if (mode === 'learn') {
+                btnLearn.className = 'px-4 py-2 rounded-xl font-extrabold text-base sm:text-lg bg-rose-500 text-white shadow';
+                btnQuiz.className = 'px-4 py-2 rounded-xl font-extrabold text-base sm:text-lg bg-pink-100 text-rose-800';
+                learnCont.classList.remove('hidden');
+                quizCont.classList.add('hidden');
+                renderG1Flashcards();
+            } else {
+                btnQuiz.className = 'px-4 py-2 rounded-xl font-extrabold text-base sm:text-lg bg-rose-500 text-white shadow';
+                btnLearn.className = 'px-4 py-2 rounded-xl font-extrabold text-base sm:text-lg bg-pink-100 text-rose-800';
+                quizCont.classList.remove('hidden');
+                learnCont.classList.add('hidden');
+                currentStep = 0;
+                nextG1QuizStep();
+            }
+        }
+
+        function renderG1Flashcards() {
+            const grid = document.getElementById('flashcardGrid');
+            grid.innerHTML = '';
+
+            FAMILY_MEMBERS.forEach(mem => {
+                const card = document.createElement('div');
+                card.className = `tablet-btn bg-white rounded-3xl p-3 sm:p-4 shadow-lg border-4 border-pink-200 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-transform`;
+                card.innerHTML = `
+                    <div class="text-5xl sm:text-6xl mb-1 bounce-gentle">${mem.emoji}</div>
+                    <div class="text-xl sm:text-2xl font-black text-indigo-900">${mem.en}</div>
+                    <div class="text-xs sm:text-sm font-bold text-pink-500">${mem.uk}</div>
+                `;
+                card.onclick = () => {
+                    playSound('pop');
+                    speakWord(mem.en);
+                };
+                grid.appendChild(card);
+            });
+        }
+
+        function nextG1QuizStep() {
+            if (currentStep >= totalSteps) {
+                triggerWinCelebration();
+                return;
+            }
+            renderProgress('g1Progress');
+
+            g1CurrentTarget = FAMILY_MEMBERS[Math.floor(Math.random() * FAMILY_MEMBERS.length)];
+            document.getElementById('g1QuizTargetWord').innerText = g1CurrentTarget.en;
+            speakWord(g1CurrentTarget.en);
+
+            const options = new Set();
+            options.add(g1CurrentTarget);
+            while (options.size < 4) {
+                const randMem = FAMILY_MEMBERS[Math.floor(Math.random() * FAMILY_MEMBERS.length)];
+                options.add(randMem);
+            }
+
+            const optionsArr = Array.from(options).sort(() => Math.random() - 0.5);
+            const container = document.getElementById('g1QuizOptions');
+            container.innerHTML = '';
+
+            optionsArr.forEach(mem => {
+                const btn = document.createElement('button');
+                btn.className = `tablet-btn bg-white border-4 border-pink-300 rounded-3xl p-4 shadow-md flex flex-col items-center justify-center text-center active:scale-90`;
+                btn.innerHTML = `
+                    <div class="text-5xl sm:text-6xl">${mem.emoji}</div>
+                    <div class="text-sm sm:text-base font-bold text-slate-500 mt-1">${mem.uk}</div>
+                `;
+                btn.onclick = () => checkG1Quiz(mem, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        function checkG1Quiz(selected, btn) {
+            if (selected.id === g1CurrentTarget.id) {
+                playSound('correct');
+                btn.classList.add('bg-emerald-100', 'border-emerald-500');
+                updateStars(1);
+                currentStep++;
+                setTimeout(() => nextG1QuizStep(), 1000);
+            } else {
+                playSound('wrong');
+                btn.classList.add('shake-error', 'opacity-40');
+                btn.disabled = true;
+            }
+        }
+
+        // ==========================================
+        // MODULE 2: FAMILY TREE
+        // ==========================================
+        let g2MissingMember = null;
+        let g2TreeMembers = [];
+
+        function nextGame2Step() {
+            if (currentStep >= totalSteps) {
+                triggerWinCelebration();
+                return;
+            }
+            renderProgress('g2Progress');
+
+            // Select 4 random family members for tree
+            const shuffled = [...FAMILY_MEMBERS].sort(() => Math.random() - 0.5);
+            g2TreeMembers = shuffled.slice(0, 4);
+            g2MissingMember = g2TreeMembers[Math.floor(Math.random() * g2TreeMembers.length)];
+
+            // Speak question
+            speakWord(`Who is missing? ${g2MissingMember.en}`);
+
+            // Render Slots
+            const slotsContainer = document.getElementById('treeSlots');
+            slotsContainer.innerHTML = '';
+
+            g2TreeMembers.forEach(mem => {
+                const slot = document.createElement('div');
+                slot.className = `w-20 h-24 sm:w-28 sm:h-32 rounded-2xl bg-white border-4 border-emerald-400 flex flex-col items-center justify-center p-2 shadow-md`;
+                
+                if (mem.id === g2MissingMember.id) {
+                    slot.innerHTML = `
+                        <div class="text-4xl sm:text-5xl opacity-30 text-emerald-800"><i class="fa-solid fa-question"></i></div>
+                        <div class="text-xs sm:text-sm font-extrabold text-emerald-700 mt-2">?</div>
+                    `;
+                    slot.id = 'missingSlot';
+                } else {
+                    slot.innerHTML = `
+                        <div class="text-4xl sm:text-5xl">${mem.emoji}</div>
+                        <div class="text-xs sm:text-sm font-extrabold text-indigo-900 mt-1">${mem.en}</div>
+                    `;
+                }
+                slotsContainer.appendChild(slot);
+            });
+
+            // Options
+            const container = document.getElementById('g2Options');
+            container.innerHTML = '';
+
+            const options = new Set();
+            options.add(g2MissingMember);
+            while (options.size < 3) {
+                options.add(FAMILY_MEMBERS[Math.floor(Math.random() * FAMILY_MEMBERS.length)]);
+            }
+
+            const optionsArr = Array.from(options).sort(() => Math.random() - 0.5);
+
+            optionsArr.forEach(mem => {
+                const btn = document.createElement('button');
+                btn.className = `tablet-btn bg-white border-4 border-indigo-300 rounded-2xl px-5 py-2 shadow-md flex items-center gap-3 active:scale-90`;
+                btn.innerHTML = `
+                    <span class="text-3xl">${mem.emoji}</span>
+                    <span class="text-lg font-black text-indigo-900">${mem.en}</span>
+                `;
+                btn.onclick = () => checkG2Answer(mem, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        function checkG2Answer(selected, btn) {
+            if (selected.id === g2MissingMember.id) {
+                playSound('correct');
+                const slot = document.getElementById('missingSlot');
+                slot.innerHTML = `
+                    <div class="text-4xl sm:text-5xl slot-pop">${selected.emoji}</div>
+                    <div class="text-xs sm:text-sm font-extrabold text-indigo-900 mt-1">${selected.en}</div>
+                `;
+                slot.classList.add('bg-emerald-100');
+
+                updateStars(1);
+                currentStep++;
+                setTimeout(() => nextGame2Step(), 1200);
+            } else {
+                playSound('wrong');
+                btn.classList.add('shake-error', 'opacity-40');
+                btn.disabled = true;
+            }
+        }
+
+        // ==========================================
+        // MODULE 3: COUNT & COLOR (NUMBERS UP TO 8)
+        // ==========================================
+        let g3Member = null;
+        let g3TargetCount = 0;
+        let g3CurrentCount = 0;
+        let g3Color = null;
+        let g3Shape = null;
+
+        function nextGame3Step() {
+            if (currentStep >= totalSteps) {
+                triggerWinCelebration();
+                return;
+            }
+            renderProgress('g3Progress');
+
+            g3Member = FAMILY_MEMBERS[Math.floor(Math.random() * FAMILY_MEMBERS.length)];
+            g3TargetCount = Math.floor(Math.random() * 8) + 1; // 1..8
+            g3CurrentCount = 0;
+            g3Color = COLORS[Math.floor(Math.random() * COLORS.length)];
+            g3Shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+
+            document.getElementById('g3MemberAvatar').innerText = g3Member.emoji;
+            document.getElementById('g3TaskText').innerText = `Give ${g3TargetCount} ${g3Color.nameEn} ${g3Shape.nameEn} to ${g3Member.en}!`;
+            document.getElementById('g3TaskUkr').innerText = `Подаруй ${g3TargetCount} ${g3Color.nameUk} ${g3Shape.nameUk} для ${g3Member.uk}!`;
+            document.getElementById('g3CurrentCountText').innerText = '0';
+            document.getElementById('g3TargetCountText').innerText = g3TargetCount;
+
+            speakWord(`Give ${g3TargetCount} ${g3Color.nameEn} ${g3Shape.nameEn} to ${g3Member.en}`);
+
+            const tray = document.getElementById('g3ItemTray');
+            tray.innerHTML = '<span class="text-slate-400 italic text-sm">Tray is empty / Порожньо</span>';
+
+            // Buttons
+            const btnContainer = document.getElementById('g3ActionButtons');
+            btnContainer.innerHTML = '';
+
+            const addBtn = document.createElement('button');
+            addBtn.className = `tablet-btn bg-emerald-500 active:bg-emerald-600 text-white font-extrabold text-xl px-6 py-3 rounded-2xl shadow-lg border-b-4 border-emerald-700 flex items-center gap-2`;
+            addBtn.style.backgroundColor = g3Color.hex;
+            addBtn.innerHTML = `<i class="fa-solid ${g3Shape.icon} text-2xl"></i> Give 1 / Додати 1`;
+            addBtn.onclick = () => addG3Item();
+
+            btnContainer.appendChild(addBtn);
+        }
+
+        function addG3Item() {
+            if (g3CurrentCount >= g3TargetCount) return;
+
+            playSound('pop');
+            g3CurrentCount++;
+            
+            document.getElementById('g3CurrentCountText').innerText = g3CurrentCount;
+
+            const tray = document.getElementById('g3ItemTray');
+            if (g3CurrentCount === 1) tray.innerHTML = '';
+
+            const item = document.createElement('div');
+            item.className = `text-4xl sm:text-5xl slot-pop`;
+            item.style.color = g3Color.hex;
+            item.innerHTML = `<i class="fa-solid ${g3Shape.icon}"></i>`;
+            tray.appendChild(item);
+
+            speakWord(`${g3CurrentCount}`);
+
+            if (g3CurrentCount === g3TargetCount) {
+                playSound('correct');
+                updateStars(1);
+                currentStep++;
+                setTimeout(() => nextGame3Step(), 1200);
+            }
+        }
+
+        // ==========================================
+        // CELEBRATION
+        // ==========================================
+        function triggerWinCelebration() {
+            playSound('win');
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 160,
+                    spread: 100,
+                    origin: { y: 0.5 }
+                });
+            }
+            setTimeout(() => showMenu(), 2500);
+        }
+    </script>
+</body>
+</html>
